@@ -82,7 +82,6 @@ if aba == "Visita Técnica":
         realizador_selecionado = st.selectbox("Selecionar Realizador:", ["Todos"] + realizadores, key="realizador_visita")
         if realizador_selecionado != "Todos":
             df = df[df["REALIZADOR"] == realizador_selecionado]
-        st.dataframe(df)
 
         # Indicadores
         total_visitas = int(df["VISITAS"].sum())
