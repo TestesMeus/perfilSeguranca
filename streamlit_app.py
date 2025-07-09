@@ -75,9 +75,20 @@ if aba == "Visita Técnica":
             else:
                 df[col] = 0
 
-        total_visitas = df["VISITAS"].sum()
-        total_conformidade = df["CONFORMIDADE"].sum()
-        total_nao_conformidade = df["NÃO CONFORMIDADE"].sum()
+        # Padronizar e contar "sim" nas colunas de conformidade
+        if "CONFORMIDADE" in df.columns:
+            df["CONFORMIDADE"] = df["CONFORMIDADE"].astype(str).str.strip().str.lower()
+            total_conformidade = (df["CONFORMIDADE"] == "Sim").sum()
+        else:
+            total_conformidade = 0
+
+        if "NÃO CONFORMIDADE" in df.columns:
+            df["NÃO CONFORMIDADE"] = df["NÃO CONFORMIDADE"].astype(str).str.strip().str.lower()
+            total_nao_conformidade = (df["NÃO CONFORMIDADE"] == "Sim").sum()
+        else:
+            total_nao_conformidade = 0
+
+        total_visitas = len(df)
         percentual_conformidade = (total_conformidade / total_visitas) * 100 if total_visitas > 0 else 0
         percentual_nao_conformidade = (total_nao_conformidade / total_visitas) * 100 if total_visitas > 0 else 0
         visitas_pendentes = pd.to_numeric(df["PENDENTE"], errors="coerce").gt(0).sum() if "PENDENTE" in df.columns else 0
