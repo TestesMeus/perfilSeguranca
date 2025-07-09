@@ -100,10 +100,24 @@ if aba == "Visita Técnica":
 
         # Pie chart de conformidade
         st.subheader("Distribuição de Conformidade")
-        fig1, ax1 = plt.subplots()
-        ax1.pie([total_conformidade, total_nao_conformidade], labels=["Conformidade", "Não Conformidade"], autopct="%1.1f%%", startangle=90)
-        ax1.axis("equal")
-        st.pyplot(fig1)
+        pie_labels = []
+        pie_values = []
+        if total_conformidade > 0:
+            pie_labels.append("Conformidade")
+            pie_values.append(total_conformidade)
+        if total_nao_conformidade > 0:
+            pie_labels.append("Não Conformidade")
+            pie_values.append(total_nao_conformidade)
+
+        if len(pie_values) > 1:
+            fig1, ax1 = plt.subplots()
+            ax1.pie(pie_values, labels=pie_labels, autopct="%1.1f%%", startangle=90)
+            ax1.axis("equal")
+            st.pyplot(fig1)
+        elif len(pie_values) == 1:
+            st.info(f"Todas as visitas estão em: {pie_labels[0]}. Gráfico de pizza não exibido pois só há um tipo de status.")
+        else:
+            st.info("Sem dados para exibir o gráfico de conformidade.")
 
         # Ranking dos maiores realizadores
         st.subheader("Ranking dos Realizadores de Visitas")
