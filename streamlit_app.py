@@ -51,6 +51,27 @@ if aba == "Visita Técnica":
         # Converter DATA para datetime
         df["DATA"] = pd.to_datetime(df["DATA"], errors="coerce", dayfirst=True)
         df["AnoMes"] = df["DATA"].dt.to_period("M").astype(str)
+
+        # PRÉ-PROCESSAMENTO ROBUSTO
+        # Padronizar e limpar colunas de sim/não
+        for col in ["CONFORMIDADE", "NÃO CONFORMIDADE"]:
+            if col in df.columns:
+                df[col] = df[col].fillna("").astype(str).str.strip().str.lower()
+            else:
+                df[col] = ""
+        # VISITAS: se não existir ou vier vazia, cada linha é uma visita
+        if "VISITAS" in df.columns:
+            df["VISITAS"] = pd.to_numeric(df["VISITAS"], errors="coerce")
+            df["VISITAS"] = df["VISITAS"].fillna(1)
+        else:
+            df["VISITAS"] = 1
+        # Tratar colunas opcionais para evitar erros
+        for col in ["CORRIGIDO", "PENDENTE"]:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+            else:
+                df[col] = 0
+
         # Filtro de mês
         meses_disponiveis = sorted(df["AnoMes"].dropna().unique())
         mes_selecionado = st.selectbox("Selecionar Mês:", ["Todos"] + meses_disponiveis, key="mes_visita")
@@ -63,36 +84,14 @@ if aba == "Visita Técnica":
             df = df[df["REALIZADOR"] == realizador_selecionado]
         st.dataframe(df)
 
-        # Garantir que VISITAS, CONFORMIDADE e NÃO CONFORMIDADE sejam numéricos e preenchidos
-        if "VISITAS" in df.columns:
-            df["VISITAS"] = pd.to_numeric(df["VISITAS"], errors="coerce")
-            df["VISITAS"] = df["VISITAS"].fillna(1)  # Cada linha é uma visita se não houver valor
-        else:
-            df["VISITAS"] = 1
-        for col in ["CONFORMIDADE", "NÃO CONFORMIDADE"]:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-            else:
-                df[col] = 0
-
-        # Padronizar e contar "sim" nas colunas de conformidade
-        if "CONFORMIDADE" in df.columns:
-            df["CONFORMIDADE"] = df["CONFORMIDADE"].astype(str).str.strip().str.lower()
-            total_conformidade = (df["CONFORMIDADE"] == "Sim").sum()
-        else:
-            total_conformidade = 0
-
-        if "NÃO CONFORMIDADE" in df.columns:
-            df["NÃO CONFORMIDADE"] = df["NÃO CONFORMIDADE"].astype(str).str.strip().str.lower()
-            total_nao_conformidade = (df["NÃO CONFORMIDADE"] == "Sim").sum()
-        else:
-            total_nao_conformidade = 0
-
-        total_visitas = len(df)
+        # Indicadores
+        total_visitas = int(df["VISITAS"].sum())
+        total_conformidade = (df["CONFORMIDADE"] == "sim").sum()
+        total_nao_conformidade = (df["NÃO CONFORMIDADE"] == "sim").sum()
         percentual_conformidade = (total_conformidade / total_visitas) * 100 if total_visitas > 0 else 0
         percentual_nao_conformidade = (total_nao_conformidade / total_visitas) * 100 if total_visitas > 0 else 0
-        visitas_pendentes = pd.to_numeric(df["PENDENTE"], errors="coerce").gt(0).sum() if "PENDENTE" in df.columns else 0
-        visitas_corrigidas = pd.to_numeric(df["CORRIGIDO"], errors="coerce").gt(0).sum() if "CORRIGIDO" in df.columns else 0
+        visitas_pendentes = df["PENDENTE"].gt(0).sum() if "PENDENTE" in df.columns else 0
+        visitas_corrigidas = df["CORRIGIDO"].gt(0).sum() if "CORRIGIDO" in df.columns else 0
 
         col1, col2, col3 = st.columns(3)
         col1.metric("Total de Visitas", int(total_visitas))
@@ -115,8 +114,8 @@ if aba == "Visita Técnica":
         st.bar_chart(visitas_mes)
 
         # Gráfico de conformidade e não conformidade por mês
-        conf_mes = df.groupby("AnoMes")["CONFORMIDADE"].apply(lambda x: pd.to_numeric(x, errors="coerce").sum())
-        nconf_mes = df.groupby("AnoMes")["NÃO CONFORMIDADE"].apply(lambda x: pd.to_numeric(x, errors="coerce").sum())
+        conf_mes = df.groupby("AnoMes")["CONFORMIDADE"].apply(lambda x: (x == "sim").sum())
+        nconf_mes = df.groupby("AnoMes")["NÃO CONFORMIDADE"].apply(lambda x: (x == "sim").sum())
         st.subheader("Conformidade x Não Conformidade por Mês")
         st.line_chart(pd.DataFrame({"Conformidade": conf_mes, "Não Conformidade": nconf_mes}))
 
