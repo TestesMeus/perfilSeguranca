@@ -50,6 +50,11 @@ if aba == "Visita Técnica":
         mes_selecionado = st.selectbox("Selecionar Mês:", ["Todos"] + meses_disponiveis, key="mes_visita")
         if mes_selecionado != "Todos":
             df = df[df["AnoMes"] == mes_selecionado]
+        # Filtro de Realizador
+        realizadores = sorted(df["REALIZADOR"].dropna().unique())
+        realizador_selecionado = st.selectbox("Selecionar Realizador:", ["Todos"] + realizadores, key="realizador_visita")
+        if realizador_selecionado != "Todos":
+            df = df[df["REALIZADOR"] == realizador_selecionado]
         st.dataframe(df)
 
         # Indicadores
