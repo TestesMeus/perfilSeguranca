@@ -63,10 +63,21 @@ if aba == "Visita Técnica":
             df = df[df["REALIZADOR"] == realizador_selecionado]
         st.dataframe(df)
 
-        # Indicadores
-        total_visitas = pd.to_numeric(df["VISITAS"], errors="coerce").sum()
-        total_conformidade = pd.to_numeric(df["CONFORMIDADE"], errors="coerce").sum()
-        total_nao_conformidade = pd.to_numeric(df["NÃO CONFORMIDADE"], errors="coerce").sum()
+        # Garantir que VISITAS, CONFORMIDADE e NÃO CONFORMIDADE sejam numéricos e preenchidos
+        if "VISITAS" in df.columns:
+            df["VISITAS"] = pd.to_numeric(df["VISITAS"], errors="coerce")
+            df["VISITAS"] = df["VISITAS"].fillna(1)  # Cada linha é uma visita se não houver valor
+        else:
+            df["VISITAS"] = 1
+        for col in ["CONFORMIDADE", "NÃO CONFORMIDADE"]:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+            else:
+                df[col] = 0
+
+        total_visitas = df["VISITAS"].sum()
+        total_conformidade = df["CONFORMIDADE"].sum()
+        total_nao_conformidade = df["NÃO CONFORMIDADE"].sum()
         percentual_conformidade = (total_conformidade / total_visitas) * 100 if total_visitas > 0 else 0
         percentual_nao_conformidade = (total_nao_conformidade / total_visitas) * 100 if total_visitas > 0 else 0
         visitas_pendentes = pd.to_numeric(df["PENDENTE"], errors="coerce").gt(0).sum() if "PENDENTE" in df.columns else 0
