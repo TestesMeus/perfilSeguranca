@@ -146,6 +146,49 @@ elif aba == "Estoque":
 
 elif aba == "Treinamentos":
     df = carregar_dados(CSV_TREINAMENTOS)
-    st.title("🎓 Treinamentos")
-    st.dataframe(df)
-    st.info("Adapte aqui os indicadores e gráficos conforme as colunas da sua aba de treinamentos.")
+    if not df.empty:
+        df.columns = ["DATA", "NORMA", "CONVIDADOS", "PARTICIPANTES", "PERCENTUAL"]
+        st.title("🎓 Treinamentos")
+        st.dataframe(df)
+
+        # Converter DATA para datetime e colunas numéricas
+        df["DATA"] = pd.to_datetime(df["DATA"], errors="coerce", dayfirst=True)
+        df["CONVIDADOS"] = pd.to_numeric(df["CONVIDADOS"], errors="coerce").fillna(0)
+        df["PARTICIPANTES"] = pd.to_numeric(df["PARTICIPANTES"], errors="coerce").fillna(0)
+        df["PERCENTUAL"] = pd.to_numeric(df["PERCENTUAL"], errors="coerce").fillna(0)
+
+        # Indicadores
+        total_treinamentos = len(df)
+        total_convidados = df["CONVIDADOS"].sum()
+        total_participantes = df["PARTICIPANTES"].sum()
+        percentual_geral = (total_participantes / total_convidados) * 100 if total_convidados > 0 else 0
+        norma_mais_realizada = df["NORMA"].value_counts().idxmax() if not df["NORMA"].isnull().all() else "-"
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total de Treinamentos", total_treinamentos)
+        col2.metric("Total de Convidados", int(total_convidados))
+        col3.metric("Total de Participantes", int(total_participantes))
+
+        col4, col5 = st.columns(2)
+        col4.metric("% Participação Geral", f"{percentual_geral:.1f}%")
+        col5.metric("Norma Mais Realizada", norma_mais_realizada)
+
+        st.divider()
+
+        # Evolução de treinamentos por mês
+        df["AnoMes"] = df["DATA"].dt.to_period("M").astype(str)
+        treinamentos_mes = df.groupby("AnoMes").size()
+        st.subheader("Evolução de Treinamentos por Mês")
+        st.bar_chart(treinamentos_mes)
+
+        # Gráfico de barras das normas mais realizadas
+        st.subheader("Normas Mais Realizadas")
+        normas = df["NORMA"].value_counts().head(10)
+        st.bar_chart(normas)
+
+        # Gráfico de barras do percentual de participação por norma
+        st.subheader("% Participação por Norma (Média)")
+        percentuais_norma = df.groupby("NORMA")["PERCENTUAL"].mean().sort_values(ascending=False)
+        st.bar_chart(percentuais_norma)
+    else:
+        st.warning("Tabela de Treinamentos vazia ou não carregada corretamente.")
