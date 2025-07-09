@@ -37,10 +37,16 @@ aba = st.sidebar.selectbox(
 if aba == "Visita Técnica":
     df = carregar_dados(CSV_VISITA)
     if not df.empty:
-        df.columns = [
+        # Ajustar colunas para não exigir motivo, corrigido e pendente
+        colunas_base = [
             "DATA", "REALIZADOR", "CONTRATO", "VISITAS", "CONFORMIDADE",
             "NÃO CONFORMIDADE", "MOTIVO DE NÃO CONFORMIDADE", "CORRIGIDO", "PENDENTE"
         ]
+        # Se faltar alguma coluna, adiciona com valor vazio
+        for col in colunas_base:
+            if col not in df.columns:
+                df[col] = ""
+        df = df[colunas_base]
         st.title("📋 Visita Técnica")
         # Converter DATA para datetime
         df["DATA"] = pd.to_datetime(df["DATA"], errors="coerce", dayfirst=True)
@@ -63,8 +69,8 @@ if aba == "Visita Técnica":
         total_nao_conformidade = pd.to_numeric(df["NÃO CONFORMIDADE"], errors="coerce").sum()
         percentual_conformidade = (total_conformidade / total_visitas) * 100 if total_visitas > 0 else 0
         percentual_nao_conformidade = (total_nao_conformidade / total_visitas) * 100 if total_visitas > 0 else 0
-        visitas_pendentes = pd.to_numeric(df["PENDENTE"], errors="coerce").gt(0).sum()
-        visitas_corrigidas = pd.to_numeric(df["CORRIGIDO"], errors="coerce").gt(0).sum()
+        visitas_pendentes = pd.to_numeric(df["PENDENTE"], errors="coerce").gt(0).sum() if "PENDENTE" in df.columns else 0
+        visitas_corrigidas = pd.to_numeric(df["CORRIGIDO"], errors="coerce").gt(0).sum() if "CORRIGIDO" in df.columns else 0
 
         col1, col2, col3 = st.columns(3)
         col1.metric("Total de Visitas", int(total_visitas))
@@ -106,7 +112,7 @@ if aba == "Visita Técnica":
 
         # Gráfico de barras dos principais motivos de não conformidade
         st.subheader("Principais Motivos de Não Conformidade")
-        motivos = df["MOTIVO DE NÃO CONFORMIDADE"].value_counts().head(10)
+        motivos = df["MOTIVO DE NÃO CONFORMIDADE"].value_counts().head(10) if "MOTIVO DE NÃO CONFORMIDADE" in df.columns else pd.Series()
         st.bar_chart(motivos)
     else:
         st.warning("Tabela de Visita Técnica vazia ou não carregada corretamente.")
