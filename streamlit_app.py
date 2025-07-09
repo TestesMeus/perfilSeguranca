@@ -42,10 +42,15 @@ if aba == "Visita Técnica":
             "NÃO CONFORMIDADE", "MOTIVO DE NÃO CONFORMIDADE", "CORRIGIDO", "PENDENTE"
         ]
         st.title("📋 Visita Técnica")
-        st.dataframe(df)
-
         # Converter DATA para datetime
         df["DATA"] = pd.to_datetime(df["DATA"], errors="coerce", dayfirst=True)
+        df["AnoMes"] = df["DATA"].dt.to_period("M").astype(str)
+        # Filtro de mês
+        meses_disponiveis = sorted(df["AnoMes"].dropna().unique())
+        mes_selecionado = st.selectbox("Selecionar Mês:", ["Todos"] + meses_disponiveis, key="mes_visita")
+        if mes_selecionado != "Todos":
+            df = df[df["AnoMes"] == mes_selecionado]
+        st.dataframe(df)
 
         # Indicadores
         total_visitas = pd.to_numeric(df["VISITAS"], errors="coerce").sum()
@@ -72,7 +77,6 @@ if aba == "Visita Técnica":
         st.divider()
 
         # Gráfico de visitas por mês
-        df["AnoMes"] = df["DATA"].dt.to_period("M").astype(str)
         visitas_mes = df.groupby("AnoMes")["VISITAS"].apply(lambda x: pd.to_numeric(x, errors="coerce").sum())
         st.subheader("Evolução de Visitas por Mês")
         st.bar_chart(visitas_mes)
@@ -149,16 +153,24 @@ elif aba == "Treinamentos":
     if not df.empty:
         df.columns = ["DATA", "NORMA", "CONVIDADOS", "PARTICIPANTES", "PERCENTUAL"]
         st.title("🎓 Treinamentos")
-        st.dataframe(df)
-
         # Converter DATA para datetime e colunas numéricas
         df["DATA"] = pd.to_datetime(df["DATA"], errors="coerce", dayfirst=True)
         df["CONVIDADOS"] = pd.to_numeric(df["CONVIDADOS"], errors="coerce").fillna(0)
         df["PARTICIPANTES"] = pd.to_numeric(df["PARTICIPANTES"], errors="coerce").fillna(0)
         df["PERCENTUAL"] = pd.to_numeric(df["PERCENTUAL"], errors="coerce").fillna(0)
+        # Remover linhas com valores nulos ou vazios nas colunas essenciais
+        df = df.dropna(subset=["DATA", "NORMA", "CONVIDADOS", "PARTICIPANTES", "PERCENTUAL"])
+        df = df[df["NORMA"].astype(str).str.strip().str.lower() != "none"]
+        df["AnoMes"] = df["DATA"].dt.to_period("M").astype(str)
+        # Filtro de mês
+        meses_disponiveis = sorted(df["AnoMes"].dropna().unique())
+        mes_selecionado = st.selectbox("Selecionar Mês:", ["Todos"] + meses_disponiveis, key="mes_treinamento")
+        if mes_selecionado != "Todos":
+            df = df[df["AnoMes"] == mes_selecionado]
+        st.dataframe(df)
 
         # Indicadores
-        total_treinamentos = len(df)
+        total_treinamentos = df.shape[0]
         total_convidados = df["CONVIDADOS"].sum()
         total_participantes = df["PARTICIPANTES"].sum()
         percentual_geral = (total_participantes / total_convidados) * 100 if total_convidados > 0 else 0
@@ -176,7 +188,6 @@ elif aba == "Treinamentos":
         st.divider()
 
         # Evolução de treinamentos por mês
-        df["AnoMes"] = df["DATA"].dt.to_period("M").astype(str)
         treinamentos_mes = df.groupby("AnoMes").size()
         st.subheader("Evolução de Treinamentos por Mês")
         st.bar_chart(treinamentos_mes)
