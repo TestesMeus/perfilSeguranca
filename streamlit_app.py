@@ -309,6 +309,24 @@ elif aba == "Notificações":
         col1.metric("Total de Notificações", total_notificacoes)
         col2.metric("Total de Advertências", total_advertencias)
         st.divider()
+        # Gráficos de barras horizontais
+        st.subheader("Orientações por Setor")
+        orientacoes_setor = df_ano[df_ano["ADVERTENCIA_ORIENTACAO"].str.strip().str.lower().isin(["orientação", "orientacao"])]
+        orientacoes_setor_count = orientacoes_setor["SETOR"].value_counts()
+        st.bar_chart(orientacoes_setor_count, use_container_width=True)
+
+        st.subheader("Advertências por Setor")
+        advertencias_setor = df_ano[df_ano["ADVERTENCIA_ORIENTACAO"].str.strip().str.lower().isin(["advertência", "advertencia"])]
+        advertencias_setor_count = advertencias_setor["SETOR"].value_counts()
+        st.bar_chart(advertencias_setor_count, use_container_width=True)
+
+        st.subheader("Orientações por Contrato")
+        orientacoes_contrato_count = orientacoes_setor["CONTRATO"].value_counts()
+        st.bar_chart(orientacoes_contrato_count, use_container_width=True)
+
+        st.subheader("Advertências por Contrato")
+        advertencias_contrato_count = advertencias_setor["CONTRATO"].value_counts()
+        st.bar_chart(advertencias_contrato_count, use_container_width=True)
         st.subheader(f"Todas as Notificações de {ano_selecionado}")
         st.dataframe(df_ano[["CONTRATO", "SETOR", "DATA", "ADVERTENCIA_ORIENTACAO"]].sort_values("DATA"))
     else:
