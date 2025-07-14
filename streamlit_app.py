@@ -8,10 +8,12 @@ SHEET_ID = "174sI6MnCUSW34Z-nptBDybP5i03oj15dgCbIcjUltXk"
 GID_VISITA = "0"
 GID_ESTOQUE = "300539656"
 GID_TREINAMENTOS = "1439340822"
+GID_CAMPANHAS = "808950334"
 
 CSV_VISITA = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_VISITA}"
 CSV_ESTOQUE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_ESTOQUE}"
 CSV_TREINAMENTOS = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_TREINAMENTOS}"
+CSV_CAMPANHAS = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CAMPANHAS}"
 
 if "atualizar" not in st.session_state:
     st.session_state.atualizar = 0
@@ -31,7 +33,7 @@ def carregar_dados(url):
 
 aba = st.sidebar.selectbox(
     "Escolha a tabela para visualizar:",
-    ("Visita Técnica", "Estoque", "Treinamentos")
+    ("Visita Técnica", "Estoque", "Treinamentos", "Campanhas")
 )
 
 if aba == "Visita Técnica":
@@ -248,3 +250,35 @@ elif aba == "Treinamentos":
         st.bar_chart(percentuais_norma)
     else:
         st.warning("Tabela de Treinamentos vazia ou não carregada corretamente.")
+
+elif aba == "Campanhas":
+    df = carregar_dados(CSV_CAMPANHAS)
+    if not df.empty:
+        df.columns = ["CAMPANHA", "INICIO", "FIM"]
+        st.title("📢 Campanhas")
+        # Converter datas para datetime
+        df["INICIO"] = pd.to_datetime(df["INICIO"], errors="coerce", dayfirst=True)
+        df["FIM"] = pd.to_datetime(df["FIM"], errors="coerce", dayfirst=True)
+        # Remover linhas sem nome de campanha
+        df = df.dropna(subset=["CAMPANHA"])
+        # Adicionar coluna de ano
+        df["ANO"] = df["INICIO"].dt.year
+        anos_disponiveis = sorted(df["ANO"].dropna().unique())
+        ano_atual = pd.Timestamp.today().year
+        ano_selecionado = st.selectbox("Selecionar Ano:", anos_disponiveis[::-1], index=anos_disponiveis[::-1].index(ano_atual) if ano_atual in anos_disponiveis else 0)
+        df_ano = df[df["ANO"] == ano_selecionado]
+        hoje = pd.Timestamp.today().normalize()
+        # Indicadores
+        total_realizadas = df_ano[df_ano["FIM"] <= hoje].shape[0]
+        total_futuras = df_ano[df_ano["INICIO"] > hoje].shape[0]
+        campanhas_por_nome = df_ano["CAMPANHA"].value_counts()
+        col1, col2 = st.columns(2)
+        col1.metric("Campanhas Realizadas", total_realizadas)
+        col2.metric("Campanhas Futuras", total_futuras)
+        st.divider()
+        st.subheader("Quantidade de Campanhas por Nome")
+        st.bar_chart(campanhas_por_nome)
+        st.subheader(f"Todas as Campanhas de {ano_selecionado}")
+        st.dataframe(df_ano[["CAMPANHA", "INICIO", "FIM"]].sort_values("INICIO"))
+    else:
+        st.warning("Tabela de Campanhas vazia ou não carregada corretamente.")
