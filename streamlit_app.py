@@ -9,11 +9,13 @@ GID_VISITA = "0"
 GID_ESTOQUE = "300539656"
 GID_TREINAMENTOS = "1439340822"
 GID_CAMPANHAS = "808950334"
+GID_NOTIFICACOES = "1347079540"
 
 CSV_VISITA = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_VISITA}"
 CSV_ESTOQUE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_ESTOQUE}"
 CSV_TREINAMENTOS = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_TREINAMENTOS}"
 CSV_CAMPANHAS = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CAMPANHAS}"
+CSV_NOTIFICACOES = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_NOTIFICACOES}"
 
 if "atualizar" not in st.session_state:
     st.session_state.atualizar = 0
@@ -33,7 +35,7 @@ def carregar_dados(url):
 
 aba = st.sidebar.selectbox(
     "Escolha a tabela para visualizar:",
-    ("Visita Técnica", "Estoque", "Treinamentos", "Campanhas")
+    ("Visita Técnica", "Estoque", "Treinamentos", "Campanhas", "Notificações")
 )
 
 if aba == "Visita Técnica":
@@ -268,6 +270,8 @@ elif aba == "Campanhas":
         ano_selecionado = st.selectbox("Selecionar Ano:", anos_disponiveis[::-1], index=anos_disponiveis[::-1].index(ano_atual) if ano_atual in anos_disponiveis else 0)
         df_ano = df[df["ANO"] == ano_selecionado]
         hoje = pd.Timestamp.today().normalize()
+        total_campanhas_ano = df_ano.shape[0]
+        st.markdown(f"**Total de campanhas em {ano_selecionado}: {total_campanhas_ano}**")
         # Indicadores
         total_realizadas = df_ano[df_ano["FIM"] <= hoje].shape[0]
         total_futuras = df_ano[df_ano["INICIO"] > hoje].shape[0]
@@ -282,3 +286,30 @@ elif aba == "Campanhas":
         st.dataframe(df_ano[["CAMPANHA", "INICIO", "FIM"]].sort_values("INICIO"))
     else:
         st.warning("Tabela de Campanhas vazia ou não carregada corretamente.")
+
+elif aba == "Notificações":
+    df = carregar_dados(CSV_NOTIFICACOES)
+    if not df.empty:
+        df.columns = ["CONTRATO", "SETOR", "DATA", "ADVERTENCIA_ORIENTACAO"]
+        st.title("📑 Notificações")
+        # Converter DATA para datetime
+        df["DATA"] = pd.to_datetime(df["DATA"], errors="coerce", dayfirst=True)
+        # Remover linhas sem data
+        df = df.dropna(subset=["DATA"])
+        # Adicionar coluna de ano
+        df["ANO"] = df["DATA"].dt.year
+        anos_disponiveis = sorted(df["ANO"].dropna().unique())
+        ano_atual = pd.Timestamp.today().year
+        ano_selecionado = st.selectbox("Selecionar Ano:", anos_disponiveis[::-1], index=anos_disponiveis[::-1].index(ano_atual) if ano_atual in anos_disponiveis else 0)
+        df_ano = df[df["ANO"] == ano_selecionado]
+        total_notificacoes = df_ano.shape[0]
+        total_advertencias = (df_ano["ADVERTENCIA_ORIENTACAO"].str.strip().str.lower() == "advertência").sum() + (df_ano["ADVERTENCIA_ORIENTACAO"].str.strip().str.lower() == "advertencia").sum()
+        st.markdown(f"**Total de notificações em {ano_selecionado}: {total_notificacoes}**")
+        col1, col2 = st.columns(2)
+        col1.metric("Total de Notificações", total_notificacoes)
+        col2.metric("Total de Advertências", total_advertencias)
+        st.divider()
+        st.subheader(f"Todas as Notificações de {ano_selecionado}")
+        st.dataframe(df_ano[["CONTRATO", "SETOR", "DATA", "ADVERTENCIA_ORIENTACAO"]].sort_values("DATA"))
+    else:
+        st.warning("Tabela de Notificações vazia ou não carregada corretamente.")
